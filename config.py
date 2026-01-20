@@ -1,0 +1,28 @@
+# config.py
+import os
+import json
+
+CONFIG_FILE = "config.json"
+
+with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+    _cfg = json.load(f)
+
+DISCORD_TOKEN = _cfg.get("DISCORD_TOKEN")
+
+
+# === GUILD / CHANNELS ===
+GUILD_ID = 752573313259143259
+POLL_CHANNEL_ID = 896836842287165520
+POLL_MISSING_VOTES_CHANNEL_ID = 1451370011074760715  # optionnel
+
+# === ROLES ===
+ADMIN_ROLE_IDS = [
+    752573955771990057,
+]
+
+DEFAULT_POLL_NOTIFY_ROLES = [
+    752588313566773308,
+]
+
+# === POLL SETTINGS ===
+POLL_NOTIFY_COOLDOWN_SECONDS = 600
