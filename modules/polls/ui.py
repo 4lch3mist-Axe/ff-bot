@@ -16,8 +16,10 @@ from modules.polls.scheduler import (
     alert_unvoted_members,
     safe_create_task
 )
+
 import config
 
+from core.logger import module_log
 
 COLOR_OPEN = 0x3498db    # bleu
 COLOR_CLOSED = 0x95a5a6  # gris
@@ -263,6 +265,119 @@ class PollMultiVoteButton(discord.ui.Button):
             f"🔁 Multi-vote {'activé' if poll['multiple'] else 'désactivé'}",
             ephemeral=True
         )
+class PollMpAbsentsButton(discord.ui.Button):
+    def __init__(self, poll: dict):
+        super().__init__(
+            label="MP",
+            emoji="✉️",
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"poll_mp_absents:{poll['poll_id']}"
+        )
+        self.poll_id = poll["poll_id"]
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            PollMpAbsentsModal(self.poll_id)
+        )
+
+class PollMpPreviewView(discord.ui.View):
+    def __init__(self, poll_id: str, message: str):
+        super().__init__(timeout=300)  # 5 min
+        self.poll_id = poll_id
+        self.message = message
+
+    @discord.ui.button(label="✅ Envoyer", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        poll = load_poll(self.poll_id)
+        if not poll or poll["status"] != "open":
+            return await interaction.response.send_message(
+                "❌ Sondage fermé ou introuvable.",
+                ephemeral=True
+            )
+
+        # 🔐 mêmes permissions
+        member = interaction.guild.get_member(interaction.user.id)
+        is_admin = any(r.id in config.ADMIN_ROLE_IDS for r in member.roles)
+
+        if interaction.user.id != poll["created_by"] and not is_admin:
+            return await interaction.response.send_message(
+                "❌ Action non autorisée.",
+                ephemeral=True
+            )
+
+        # ⏱️ même cooldown
+        now = int(time.time())
+        last = poll.get("last_notify_ts", 0)
+        cooldown = getattr(config, "POLL_NOTIFY_COOLDOWN_SECONDS", 600)
+
+        if now - last < cooldown:
+            remaining = cooldown - (now - last)
+            return await interaction.response.send_message(
+                f"⏳ Cooldown actif ({remaining}s restantes).",
+                ephemeral=True
+            )
+
+        # 🎯 CIBLAGE — STRICTEMENT IDENTIQUE
+        voters = set(poll["votes"].keys())
+        targets = [
+            m for m in interaction.guild.members
+            if any(r.id in poll.get("notify_roles", []) for r in m.roles)
+            and str(m.id) not in voters
+            and not m.bot
+        ]
+
+        if not targets:
+            return await interaction.response.send_message(
+                "✅ Tout le monde a voté.",
+                ephemeral=True
+            )
+
+        poll_link = (
+            f"https://discord.com/channels/"
+            f"{interaction.guild.id}/"
+            f"{poll['channel_id']}/"
+            f"{poll['message_id']}"
+        )
+
+        content = (
+            "**👉 Rappel de Sauron ⚠️**\n"
+            f"**Sondage : {poll_link}**\n\n"
+            f"{self.message}"
+        )
+
+        sent = 0
+        failed = 0
+
+        for m in targets:
+            try:
+                await m.send(content)
+                sent += 1
+            except Exception:
+                failed += 1
+
+        poll["last_notify_ts"] = now
+        save_poll(poll)
+
+        module_log(
+            "polls",
+            f"MP absents sent={sent} failed={failed} poll={poll['poll_id']}"
+        )
+
+        await interaction.response.send_message(
+            f"✉️ **Messages envoyés** : {sent}\n"
+            f"❌ **Échecs** : {failed}",
+            ephemeral=True
+        )
+
+        self.stop()
+
+    @discord.ui.button(label="❌ Annuler", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            "❎ Envoi annulé.",
+            ephemeral=True
+        )
+        self.stop()
 
 # =========================
 # MODAL
@@ -314,6 +429,89 @@ class PollDurationModal(discord.ui.Modal, title="⏱️ Durée du sondage (jours
         )
 
 
+class PollMpAbsentsModal(discord.ui.Modal):
+    def __init__(self, poll_id: str):
+        super().__init__(title="Message aux absents")
+        self.poll_id = poll_id
+
+        self.message = discord.ui.TextInput(
+            label="Message",
+            style=discord.TextStyle.paragraph,
+            placeholder="Message à envoyer aux membres n’ayant pas encore voté…",
+            max_length=2000,
+            required=True
+        )
+        self.add_item(self.message)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        poll = load_poll(self.poll_id)
+        if not poll or poll["status"] != "open":
+            return await interaction.response.send_message(
+                "❌ Sondage fermé ou introuvable.",
+                ephemeral=True
+            )
+
+        # 🔐 mêmes permissions que Notifier absents
+        member = interaction.guild.get_member(interaction.user.id)
+        is_admin = any(r.id in config.ADMIN_ROLE_IDS for r in member.roles)
+
+        if interaction.user.id != poll["created_by"] and not is_admin:
+            return await interaction.response.send_message(
+                "❌ Action réservée au créateur ou aux admins.",
+                ephemeral=True
+            )
+
+        # ⏱️ même cooldown
+        now = int(time.time())
+        last = poll.get("last_notify_ts", 0)
+        cooldown = getattr(config, "POLL_NOTIFY_COOLDOWN_SECONDS", 600)
+
+        if now - last < cooldown:
+            remaining = cooldown - (now - last)
+            return await interaction.response.send_message(
+                f"⏳ Cooldown actif ({remaining}s restantes).",
+                ephemeral=True
+            )
+
+        # 🎯 CIBLAGE — COPIÉ STRICTEMENT DU BOUTON EXISTANT
+        voters = set(poll["votes"].keys())
+        targets = [
+            m for m in interaction.guild.members
+            if any(r.id in poll.get("notify_roles", []) for r in m.roles)
+            and str(m.id) not in voters
+            and not m.bot
+        ]
+
+        if not targets:
+            return await interaction.response.send_message(
+                "✅ Tout le monde a voté.",
+                ephemeral=True
+            )
+
+        # 🧾 Message avec contexte (C2)
+        count = len(targets)
+
+        poll_link = (
+            f"https://discord.com/channels/"
+            f"{interaction.guild.id}/"
+            f"{poll['channel_id']}/"
+            f"{poll['message_id']}"
+        )
+
+        preview = (
+            "🧾 **Aperçu du message envoyé en MP**\n\n"
+            f"👥 **Destinataires** : {count}\n\n"
+            "**👉 Rappel de Sauron ⚠️**\n"
+            f"**Sondage : {poll_link}**\n\n"
+            f"{self.message.value}"
+        )
+
+        await interaction.response.send_message(
+            preview,
+            view=PollMpPreviewView(self.poll_id, self.message.value),
+            ephemeral=True
+        )
+
 # =========================
 # VIEW
 # =========================
@@ -328,3 +526,4 @@ class PollView(discord.ui.View):
             self.add_item(PollTimerButton(poll))
             self.add_item(PollMultiVoteButton(poll))
             self.add_item(PollNotifyAbsentsButton(poll))
+            self.add_item(PollMpAbsentsButton(poll))

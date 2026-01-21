@@ -59,3 +59,4 @@ def reset_user_absences(user_id: int):
 
 def reset_all_absences():
     save_non_voters({})
+
