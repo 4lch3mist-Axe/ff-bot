@@ -3,35 +3,46 @@
 ├── config.json
 ├── config.py
 ├── core
+│   ├── bot.py
 │   ├── db.py
 │   ├── logger.py
 │   └── __pycache__
+│       ├── bot.cpython-310.pyc
 │       ├── db.cpython-310.pyc
 │       └── logger.cpython-310.pyc
 ├── data
 │   └── polls
 │       ├── active
-│       │   ├── poll_9c8fd174.json
-│       │   └── poll_bc7d3625.json
 │       ├── archive
 │       ├── non_voters.json
 │       └── polls.db
 ├── main.py
+├── modules
+│   └── polls
+│       ├── commands.py
+│       ├── manager.py
+│       ├── non_voters.py
+│       ├── polls_db.py
+│       ├── __pycache__
+│       │   ├── commands.cpython-310.pyc
+│       │   ├── manager.cpython-310.pyc
+│       │   ├── non_voters.cpython-310.pyc
+│       │   ├── polls_db.cpython-310.pyc
+│       │   ├── resume.cpython-310.pyc
+│       │   ├── scheduler.cpython-310.pyc
+│       │   ├── storage.cpython-310.pyc
+│       │   ├── ui.cpython-310.pyc
+│       │   └── utils.cpython-310.pyc
+│       ├── resume.py
+│       ├── scheduler.py
+│       ├── storage.py
+│       ├── ui.py
+│       └── utils.py
 ├── polls
 │   ├── commands.py
 │   ├── manager.py
 │   ├── non_voters.py
 │   ├── polls_db.py
-│   ├── __pycache__
-│   │   ├── commands.cpython-310.pyc
-│   │   ├── manager.cpython-310.pyc
-│   │   ├── non_voters.cpython-310.pyc
-│   │   ├── polls_db.cpython-310.pyc
-│   │   ├── resume.cpython-310.pyc
-│   │   ├── scheduler.cpython-310.pyc
-│   │   ├── storage.cpython-310.pyc
-│   │   ├── ui.cpython-310.pyc
-│   │   └── utils.cpython-310.pyc
 │   ├── resume.py
 │   ├── scheduler.py
 │   ├── storage.py
@@ -45,4 +56,4 @@
     └── __pycache__
         └── embed_factory.cpython-310.pyc
 
-11 directories, 34 files
+13 directories, 43 files

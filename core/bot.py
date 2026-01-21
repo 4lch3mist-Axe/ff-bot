@@ -2,10 +2,7 @@ import discord
 from discord import app_commands
 
 from core.logger import log
-
-from modules.polls.commands import setup_poll_commands
-from modules.polls.resume import resume_poll_views
-from modules.polls.scheduler import resume_open_polls
+from core.module_loader import load_modules, load_module_jobs
 
 
 class PollBot(discord.Client):
@@ -18,14 +15,12 @@ class PollBot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        setup_poll_commands(self.tree, self.guild_id)
+        load_modules(self.tree, self.guild_id)
 
         guild = discord.Object(id=self.guild_id)
         await self.tree.sync(guild=guild)
 
+        await load_module_jobs(self)
+
         log("Slash commands synced", "READY")
 
-    async def on_ready(self):
-        log(f"PollBot connecté en tant que {self.user}", "READY")
-        await resume_poll_views(self)
-        await resume_open_polls(self)

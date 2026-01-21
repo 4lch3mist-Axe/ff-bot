@@ -4,6 +4,7 @@ from discord import app_commands
 import config
 
 from core.logger import log
+from core.logger import module_log
 
 from modules.polls.manager import (
     create_poll,
@@ -59,7 +60,6 @@ class PollStatusView(discord.ui.View):
 # SETUP
 # =========================
 def setup_poll_commands(tree: app_commands.CommandTree, GUILD_ID: int):
-
     # =========================
     # /poll
     # =========================
@@ -385,3 +385,7 @@ def setup_poll_commands(tree: app_commands.CommandTree, GUILD_ID: int):
             view=view,
             ephemeral=True
         )
+
+def setup(tree, guild_id):
+    module_log("polls", "registering commands")
+    setup_poll_commands(tree, guild_id)

@@ -4,4 +4,4 @@ __pycache__/
 *.pyc
 data/**/*.db
 data/**/active/
-data/**/archive/
+data/**/archive/config.json

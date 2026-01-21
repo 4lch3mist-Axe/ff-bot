@@ -5,6 +5,7 @@ from modules.polls.polls_db import init_db
 
 
 if __name__ == "__main__":
+    print(">>> DEV MAIN STARTED <<<")
     if not DISCORD_TOKEN:
         raise RuntimeError("POLLBOT_TOKEN manquant")
 

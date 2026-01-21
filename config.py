@@ -1,28 +1,26 @@
-# config.py
-import os
 import json
+from pathlib import Path
 
-CONFIG_FILE = "config.json"
+# === CONFIG FILE ===
+CONFIG_PATH = Path(__file__).parent / "config.json"
 
-with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+with open(CONFIG_PATH, "r", encoding="utf-8") as f:
     _cfg = json.load(f)
 
+# === DISCORD ===
 DISCORD_TOKEN = _cfg.get("DISCORD_TOKEN")
+GUILD_ID = int(_cfg.get("GUILD_ID"))
 
+# === MODULES ===
+MODULES_CONFIG = _cfg.get("modules", {})
 
-# === GUILD / CHANNELS ===
-GUILD_ID = 752573313259143259
-POLL_CHANNEL_ID = 896836842287165520
-POLL_MISSING_VOTES_CHANNEL_ID = 1451370011074760715  # optionnel
+# === CHANNELS ===
+POLL_CHANNEL_ID = int(_cfg.get("POLL_CHANNEL_ID", 0))
+POLL_MISSING_VOTES_CHANNEL_ID = int(_cfg.get("POLL_MISSING_VOTES_CHANNEL_ID", 0))
 
 # === ROLES ===
-ADMIN_ROLE_IDS = [
-    752573955771990057,
-]
-
-DEFAULT_POLL_NOTIFY_ROLES = [
-    752588313566773308,
-]
+ADMIN_ROLE_IDS = _cfg.get("ADMIN_ROLE_IDS", [])
+DEFAULT_POLL_NOTIFY_ROLES = _cfg.get("DEFAULT_POLL_NOTIFY_ROLES", [])
 
 # === POLL SETTINGS ===
-POLL_NOTIFY_COOLDOWN_SECONDS = 600
+POLL_NOTIFY_COOLDOWN_SECONDS = _cfg.get("POLL_NOTIFY_COOLDOWN_SECONDS", 600)
